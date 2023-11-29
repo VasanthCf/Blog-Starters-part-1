@@ -1,0 +1,67 @@
+const upload_it = (blobInfo) => {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "tiny", true); // Replace with your actual route
+
+    xhr.onload = () => {
+      if (xhr.status === 403) {
+        reject("HTTP Error: " + xhr.status);
+        return;
+      }
+
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject("HTTP Error: " + xhr.status);
+        return;
+      }
+
+      const json = JSON.parse(xhr.responseText);
+
+      if (!json || typeof json.location !== "string") {
+        reject("Invalid JSON: " + xhr.responseText);
+        return;
+      }
+
+      resolve(json.location);
+    };
+
+    xhr.onerror = () => {
+      reject(
+        "Image upload failed due to a XHR Transport error. Code: " + xhr.status
+      );
+    };
+
+    const formData = new FormData();
+    formData.append("file", blobInfo.blob(), blobInfo.filename());
+
+    xhr.send(formData);
+  });
+};
+
+tinymce.init({
+  selector: "textarea#create-body",
+  plugins:
+    "lists advlist link table code help wordcount autoresize autosave code fullscreen preview nonbreaking image insertdatetime",
+  resize: "both",
+  autoresize_overflow_padding: 10,
+  min_height: 500,
+  toolbar:
+    " undo redo styles bold italic link numlist bullist  alignleft aligncenter alignright  alignjustify indent fontSize code restoredraft fullscreen preview image insertdatetime",
+  allow_html_in_named_anchor: true,
+  block_unsupported_drop: false,
+  content_style: "body {font-family: Arial; }",
+  // newline_behavior: "block",
+  // preformatted: true,
+  browser_spellcheck: true,
+  nonbreaking_force_tab: true,
+  indentation: "20pt",
+  setup: function (editor) {
+    editor.on("keydown", function (e) {
+      if (e.keyCode === 13) {
+        // Check if the key pressed is Enter.
+        editor.execCommand("mceInsertContent", false, "<br><p>"); // Insert <br> element.
+        e.preventDefault(); // Prevent default Enter key behavior (creating paragraphs).
+      }
+    });
+  },
+  images_upload_handler: upload_it,
+});
